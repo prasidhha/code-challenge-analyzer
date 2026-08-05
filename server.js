@@ -32,3 +32,36 @@ app.get('/api/problems/:id', (req, res) => {
 app.listen(3000, () => {
   console.log('Server running on http://localhost:3000');
 });
+
+const { addSubmission, getBySession } = require('./data/submissions');
+const crypto = require('crypto');
+
+app.post('/api/sessions', (req, res) => {
+  res.status(201).json({ sessionId: crypto.randomUUID() });
+});
+
+app.post('/api/submissions', (req, res) => {
+  const { sessionId, problemId, code } = req.body;
+
+  if (!sessionId || !problemId || typeof code !== 'string') {
+    return res.status(400).json({ error: 'sessionId, problemId and code are required' });
+  }
+
+  const problem = problems.find(p => p.id === Number(problemId));
+  if (!problem) {
+    return res.status(404).json({ error: 'Problem not found' });
+  }
+
+  const saved = addSubmission({ sessionId, problemId: problem.id, code });
+  const runCount = getBySession(sessionId).length;
+
+  res.status(201).json({ submissionId: saved.id, runCount });
+});
+
+app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && 'body' in err) {
+    return res.status(400).json({ error: 'Invalid JSON in request body' });
+  }
+  console.error(err);
+  res.status(500).json({ error: 'Internal server error' });
+});
