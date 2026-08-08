@@ -1,4 +1,5 @@
 const problems = require('./data/problems');
+const { runTests } = require('./runner/execute');
 const express = require('express');
 const app = express();
 
@@ -40,7 +41,7 @@ app.post('/api/sessions', (req, res) => {
   res.status(201).json({ sessionId: crypto.randomUUID() });
 });
 
-app.post('/api/submissions', (req, res) => {
+app.post('/api/submissions', async(req, res) => {
   const { sessionId, problemId, code } = req.body;
 
   if (!sessionId || !problemId || typeof code !== 'string') {
@@ -54,8 +55,15 @@ app.post('/api/submissions', (req, res) => {
 
   const saved = addSubmission({ sessionId, problemId: problem.id, code });
   const runCount = getBySession(sessionId).length;
+  const testRun = await runTests(code, problem.testCases);
 
-  res.status(201).json({ submissionId: saved.id, runCount });
+  res.status(201).json({
+    submissionId: saved.id,
+    runCount,
+    passed: testRun.passed,
+    total: testRun.total,
+    results: testRun.results
+  });
 });
 
 app.use((err, req, res, next) => {
