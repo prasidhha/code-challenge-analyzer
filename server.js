@@ -14,7 +14,7 @@ const { verifyLogin, getUserById, seedUsers } = require('./data/users');
 seedUsers();
 const { attachUser, requireAuth, requireRole } = require('./middleware/auth');
 
-
+app.use(express.static('public'));
 
 app.use(express.json());
 app.use(session({
