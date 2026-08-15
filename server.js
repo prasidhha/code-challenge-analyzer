@@ -5,6 +5,8 @@ const app = express();
 
 app.use(express.json());
 
+const { createSession, getSession, addSubmission, getBySession } = require('./data/submissions');
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', service: 'code-challenge-analyzer' });
 });
@@ -34,14 +36,19 @@ app.listen(3000, () => {
   console.log('Server running on http://localhost:3000');
 });
 
-const { addSubmission, getBySession } = require('./data/submissions');
 const crypto = require('crypto');
 
 app.post('/api/sessions', (req, res) => {
-  res.status(201).json({ sessionId: crypto.randomUUID() });
+  const problemId = Number(req.body.problemId);
+  const problem = problems.find(p => p.id === problemId);
+  if (!problem) return res.status(404).json({ error: 'Problem not found' });
+
+  const sessionId = crypto.randomUUID();
+  createSession(sessionId, problem.id, problem.starterCode);
+  res.status(201).json({ sessionId, problemId: problem.id });
 });
 
-app.post('/api/submissions', async(req, res) => {
+app.post('/api/submissions', async (req, res) => {
   const { sessionId, problemId, code } = req.body;
 
   if (!sessionId || !problemId || typeof code !== 'string') {
@@ -53,15 +60,19 @@ app.post('/api/submissions', async(req, res) => {
     return res.status(404).json({ error: 'Problem not found' });
   }
 
-  const saved = addSubmission({ sessionId, problemId: problem.id, code });
-  const runCount = getBySession(sessionId).length;
+  const session = getSession(sessionId);
+  if (!session) return res.status(404).json({ error: 'Session not found' });
+
   const testRun = await runTests(code, problem.testCases);
+  const saved = addSubmission({
+    sessionId, problemId: problem.id, code,
+    passed: testRun.passed, total: testRun.total
+  });
+  const runCount = getBySession(sessionId).length;
 
   res.status(201).json({
-    submissionId: saved.id,
-    runCount,
-    passed: testRun.passed,
-    total: testRun.total,
+    submissionId: saved.id, runCount,
+    passed: testRun.passed, total: testRun.total,
     results: testRun.results
   });
 });
@@ -72,4 +83,32 @@ app.use((err, req, res, next) => {
   }
   console.error(err);
   res.status(500).json({ error: 'Internal server error' });
+});
+
+const { computeDiff } = require('./analysis/diff');
+
+app.get('/api/sessions/:id/history', (req, res) => {
+  const session = getSession(req.params.id);
+  if (!session) return res.status(404).json({ error: 'Session not found' });
+
+  const submissions = getBySession(session.id);
+  const latest = submissions[submissions.length - 1];
+
+  const timeline = submissions.map((s, i) => ({
+    submissionId: s.id,
+    runNumber: i + 1,
+    passed: s.passed,
+    total: s.total,
+    createdAt: s.created_at,
+    changedFromOriginal: computeDiff(session.original_code, s.code).changed
+  }));
+
+  res.json({
+    sessionId: session.id,
+    runCount: submissions.length,
+    originalCode: session.original_code,
+    finalCode: latest ? latest.code : session.original_code,
+    diff: latest ? computeDiff(session.original_code, latest.code) : null,
+    timeline
+  });
 });

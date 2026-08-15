@@ -1,3 +1,4 @@
+// To run other code inside a code, this helps to run python from node code
 const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
@@ -5,38 +6,68 @@ const os = require('os');
 const crypto = require('crypto');
 
 const TIMEOUT_MS = 5000;
+const MAX_OUTPUT = 100 * 1024;
+const MAX_CODE_LENGTH = 50 * 1024;
 
 function runPython(code, input) {
   return new Promise((resolve) => {
-    const file = path.join(os.tmpdir(), `run_${crypto.randomUUID()}.py`);
+    if (code.length > MAX_CODE_LENGTH) {
+      return resolve({ stdout: '', stderr: 'Code exceeds maximum length', exitCode: 1, timedOut: false });
+    }
+
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ccr-'));
+    const file = path.join(dir, 'solution.py');
     fs.writeFileSync(file, code);
 
-    const child = spawn('python', [file]);
+    const child = spawn('python', ['-I', '-B', file], {
+      cwd: dir,
+      env: { PATH: process.env.PATH, SYSTEMROOT: process.env.SYSTEMROOT },
+      windowsHide: true
+    });
 
     let stdout = '';
     let stderr = '';
     let timedOut = false;
+    let killedForOutput = false;
+
+    const cleanup = () => {
+      try { fs.rmSync(dir, { recursive: true, force: true }); } catch (e) {}
+    };
 
     const timer = setTimeout(() => {
       timedOut = true;
-      child.kill();
+      child.kill('SIGKILL');
     }, TIMEOUT_MS);
 
-    child.stdout.on('data', d => { stdout += d; });
-    child.stderr.on('data', d => { stderr += d; });
+    child.stdout.on('data', d => {
+      stdout += d;
+      if (stdout.length > MAX_OUTPUT) {
+        killedForOutput = true;
+        child.kill('SIGKILL');
+      }
+    });
 
+    child.stderr.on('data', d => {
+      if (stderr.length < MAX_OUTPUT) stderr += d;
+    });
+
+    child.on('error', (err) => {
+      clearTimeout(timer);
+      cleanup();
+      resolve({ stdout: '', stderr: `Failed to start: ${err.message}`, exitCode: 1, timedOut: false });
+    });
+
+    child.stdin.on('error', () => {});
     child.stdin.write(input || '');
     child.stdin.end();
 
     child.on('close', (exitCode) => {
       clearTimeout(timer);
-      fs.unlinkSync(file);
-      resolve({
-        stdout,
-        stderr: timedOut ? 'Execution timed out' : stderr,
-        exitCode,
-        timedOut
-      });
+      cleanup();
+      let error = stderr;
+      if (timedOut) error = 'Execution timed out';
+      if (killedForOutput) error = 'Output limit exceeded';
+      resolve({ stdout: stdout.slice(0, MAX_OUTPUT), stderr: error, exitCode, timedOut });
     });
   });
 }

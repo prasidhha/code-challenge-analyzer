@@ -1,20 +1,34 @@
-const submissions = [];
-let nextId = 1;
+const db = require('./db');
 
-function addSubmission({ sessionId, problemId, code }) {
-  const submission = {
-    id: nextId++,
-    sessionId,
-    problemId,
-    code,
-    createdAt: new Date().toISOString()
-  };
-  submissions.push(submission);
-  return submission;
+const insertSession = db.prepare(
+  'INSERT INTO sessions (id, problem_id, original_code, created_at) VALUES (?, ?, ?, ?)'
+);
+const findSession = db.prepare('SELECT * FROM sessions WHERE id = ?');
+const insertSubmission = db.prepare(
+  'INSERT INTO submissions (session_id, problem_id, code, passed, total, created_at) VALUES (?, ?, ?, ?, ?, ?)'
+);
+const selectBySession = db.prepare(
+  'SELECT * FROM submissions WHERE session_id = ? ORDER BY id'
+);
+
+function createSession(id, problemId, originalCode) {
+  insertSession.run(id, problemId, originalCode, new Date().toISOString());
+  return { id, problemId };
+}
+
+function getSession(id) {
+  return findSession.get(id);
+}
+
+function addSubmission({ sessionId, problemId, code, passed, total }) {
+  const info = insertSubmission.run(
+    sessionId, problemId, code, passed, total, new Date().toISOString()
+  );
+  return { id: info.lastInsertRowid };
 }
 
 function getBySession(sessionId) {
-  return submissions.filter(s => s.sessionId === sessionId);
+  return selectBySession.all(sessionId);
 }
 
-module.exports = { addSubmission, getBySession };
+module.exports = { createSession, getSession, addSubmission, getBySession };
