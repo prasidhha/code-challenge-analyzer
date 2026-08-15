@@ -1,19 +1,19 @@
 const db = require('./db');
 
 const insertSession = db.prepare(
-  'INSERT INTO challenge_sessions (id, problem_id, original_code, created_at) VALUES (?, ?, ?, ?)'
+  'INSERT INTO challenge_sessions (id, user_id, problem_id, original_code, created_at) VALUES (?, ?, ?, ?, ?)'
 );
-const findSession = db.prepare('SELECT * FROM challenge_sessions WHERE id = ?');
 const insertSubmission = db.prepare(
   'INSERT INTO submissions (session_id, problem_id, code, passed, total, created_at) VALUES (?, ?, ?, ?, ?, ?)'
 );
+const findSession = db.prepare('SELECT * FROM challenge_sessions WHERE id = ?');
 const selectBySession = db.prepare(
   'SELECT * FROM submissions WHERE session_id = ? ORDER BY id'
 );
 
-function createSession(id, problemId, originalCode) {
-  insertSession.run(id, problemId, originalCode, new Date().toISOString());
-  return { id, problemId };
+function createSession(id, userId, problemId, originalCode) {
+  insertSession.run(id, userId, problemId, originalCode, new Date().toISOString());
+  return { id, userId, problemId };
 }
 
 function getSession(id) {

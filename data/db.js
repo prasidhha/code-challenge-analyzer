@@ -7,6 +7,7 @@ db.pragma('journal_mode = WAL');
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS challenge_sessions (
+  user_id INTEGER,
     id TEXT PRIMARY KEY,
     problem_id INTEGER NOT NULL,
     original_code TEXT NOT NULL,

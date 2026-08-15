@@ -12,7 +12,11 @@ const db = require('./data/db');
 const { verifyLogin, getUserById, seedUsers } = require('./data/users');
 
 seedUsers();
+const { attachUser, requireAuth, requireRole } = require('./middleware/auth');
 
+
+
+app.use(express.json());
 app.use(session({
   store: new SqliteStore({
     client: db,
@@ -24,14 +28,13 @@ app.use(session({
   saveUninitialized: false,
   cookie: { httpOnly: true, maxAge: 2 * 60 * 60 * 1000 }
 }));
-
-app.use(express.json());
+app.use(attachUser);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', service: 'code-challenge-analyzer' });
 });
 
-app.get('/api/problems', (req, res) => {
+app.get('/api/problems', requireAuth, (req, res) => {
   const list = problems.map(p => ({
     id: p.id,
     title: p.title,
@@ -40,7 +43,7 @@ app.get('/api/problems', (req, res) => {
   res.json(list);
 });
 
-app.get('/api/problems/:id', (req, res) => {
+app.get('/api/problems/:id',  requireAuth,(req, res) => {
   const id = Number(req.params.id);
   const problem = problems.find(p => p.id === id);
 
@@ -58,17 +61,17 @@ app.listen(3000, () => {
 
 const crypto = require('crypto');
 
-app.post('/api/sessions', (req, res) => {
+app.post('/api/sessions', requireAuth, (req, res) => {
   const problemId = Number(req.body.problemId);
   const problem = problems.find(p => p.id === problemId);
   if (!problem) return res.status(404).json({ error: 'Problem not found' });
 
-  const sessionId = crypto.randomUUID();
-  createSession(sessionId, problem.id, problem.starterCode);
-  res.status(201).json({ sessionId, problemId: problem.id });
+ const sessionId = crypto.randomUUID();
+createSession(sessionId, req.user.id, problem.id, problem.starterCode);
+res.status(201).json({ sessionId, problemId: problem.id });
 });
 
-app.post('/api/submissions', async (req, res) => {
+app.post('/api/submissions',  requireAuth,async (req, res) => {
   const { sessionId, problemId, code } = req.body;
 
   if (!sessionId || !problemId || typeof code !== 'string') {
@@ -82,7 +85,9 @@ app.post('/api/submissions', async (req, res) => {
 
   const session = getSession(sessionId);
   if (!session) return res.status(404).json({ error: 'Session not found' });
-
+if (session.user_id !== req.user.id) {
+    return res.status(403).json({ error: 'Not your session' });
+  }
   const testRun = await runTests(code, problem.testCases);
   const saved = addSubmission({
     sessionId, problemId: problem.id, code,
@@ -107,7 +112,7 @@ app.use((err, req, res, next) => {
 
 const { computeDiff } = require('./analysis/diff');
 
-app.get('/api/sessions/:id/history', (req, res) => {
+app.get('/api/sessions/:id/history', requireAuth, requireRole('reviewer'), (req, res) => {
   const session = getSession(req.params.id);
   if (!session) return res.status(404).json({ error: 'Session not found' });
 
