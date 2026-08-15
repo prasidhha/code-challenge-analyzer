@@ -1,9 +1,9 @@
 const db = require('./db');
 
 const insertSession = db.prepare(
-  'INSERT INTO sessions (id, problem_id, original_code, created_at) VALUES (?, ?, ?, ?)'
+  'INSERT INTO challenge_sessions (id, problem_id, original_code, created_at) VALUES (?, ?, ?, ?)'
 );
-const findSession = db.prepare('SELECT * FROM sessions WHERE id = ?');
+const findSession = db.prepare('SELECT * FROM challenge_sessions WHERE id = ?');
 const insertSubmission = db.prepare(
   'INSERT INTO submissions (session_id, problem_id, code, passed, total, created_at) VALUES (?, ?, ?, ?, ?, ?)'
 );

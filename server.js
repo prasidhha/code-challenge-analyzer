@@ -3,9 +3,29 @@ const { runTests } = require('./runner/execute');
 const express = require('express');
 const app = express();
 
-app.use(express.json());
 
 const { createSession, getSession, addSubmission, getBySession } = require('./data/submissions');
+
+const session = require('express-session');
+const SqliteStore = require('better-sqlite3-session-store')(session);
+const db = require('./data/db');
+const { verifyLogin, getUserById, seedUsers } = require('./data/users');
+
+seedUsers();
+
+app.use(session({
+  store: new SqliteStore({
+    client: db,
+    table: 'login_sessions',
+    expired: { clear: true, intervalMs: 900000 }
+  }),
+  secret: 'change-this-in-production',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { httpOnly: true, maxAge: 2 * 60 * 60 * 1000 }
+}));
+
+app.use(express.json());
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', service: 'code-challenge-analyzer' });
@@ -111,4 +131,28 @@ app.get('/api/sessions/:id/history', (req, res) => {
     diff: latest ? computeDiff(session.original_code, latest.code) : null,
     timeline
   });
+});
+
+app.post('/api/auth/login', (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Username and password are required' });
+  }
+
+  const user = verifyLogin(username, password);
+  if (!user) return res.status(401).json({ error: 'Invalid username or password' });
+
+  req.session.userId = user.id;
+  res.json({ user });
+});
+
+app.post('/api/auth/logout', (req, res) => {
+  req.session.destroy(() => res.json({ ok: true }));
+});
+
+app.get('/api/auth/me', (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  const user = getUserById(req.session.userId);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  res.json({ user });
 });

@@ -6,7 +6,7 @@ const db = new Database(path.join(__dirname, 'analyzer.db'));
 db.pragma('journal_mode = WAL');
 
 db.exec(`
-  CREATE TABLE IF NOT EXISTS sessions (
+  CREATE TABLE IF NOT EXISTS challenge_sessions (
     id TEXT PRIMARY KEY,
     problem_id INTEGER NOT NULL,
     original_code TEXT NOT NULL,
@@ -21,7 +21,16 @@ db.exec(`
     passed INTEGER,
     total INTEGER,
     created_at TEXT NOT NULL,
-    FOREIGN KEY (session_id) REFERENCES sessions(id)
+    FOREIGN KEY (session_id) REFERENCES challenge_sessions(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    role TEXT NOT NULL,
+    display_name TEXT NOT NULL,
+    created_at TEXT NOT NULL
   );
 `);
 
