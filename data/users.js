@@ -25,7 +25,9 @@ function verifyLogin(username, password) {
 }
 
 function getUserById(id) {
-  return findById.get(id);
+  const u = findById.get(id);
+  if (!u) return null;
+  return { id: u.id, username: u.username, role: u.role, displayName: u.display_name };
 }
 
 function seedUsers() {

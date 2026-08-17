@@ -3,7 +3,7 @@ const { runTests } = require('./runner/execute');
 const express = require('express');
 const app = express();
 
-const { createSession, getSession, addSubmission, getBySession, submitSession } = require('./data/submissions');
+const { createSession, getSession, addSubmission, getBySession, submitSession, listSessions } = require('./data/submissions');
 
 const session = require('express-session');
 const SqliteStore = require('better-sqlite3-session-store')(session);
@@ -168,4 +168,8 @@ app.post('/api/sessions/:id/submit', requireAuth, (req, res) => {
 
   const ok = submitSession(session.id);
   res.json({ submitted: ok, submittedAt: new Date().toISOString() });
+});
+
+app.get('/api/sessions', requireAuth, requireRole('reviewer'), (req, res) => {
+  res.json(listSessions());
 });

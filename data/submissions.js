@@ -11,6 +11,23 @@ const selectBySession = db.prepare(
   'SELECT * FROM submissions WHERE session_id = ? ORDER BY id'
 );
 
+const selectAllSessions = db.prepare(`
+  SELECT cs.id, cs.problem_id, cs.created_at, cs.submitted_at,
+         u.display_name, u.username,
+         COUNT(s.id) AS run_count,
+         MAX(s.passed) AS best_passed,
+         MAX(s.total) AS total_cases
+  FROM challenge_sessions cs
+  LEFT JOIN users u ON u.id = cs.user_id
+  LEFT JOIN submissions s ON s.session_id = cs.id
+  GROUP BY cs.id
+  ORDER BY cs.created_at DESC
+`);
+
+function listSessions() {
+  return selectAllSessions.all();
+}
+
 function createSession(id, userId, problemId, originalCode) {
   insertSession.run(id, userId, problemId, originalCode, new Date().toISOString());
   return { id, userId, problemId };
@@ -40,4 +57,4 @@ function submitSession(id) {
   return info.changes > 0;
 }
 
-module.exports = { createSession, getSession, addSubmission, getBySession, submitSession };
+module.exports = { createSession, getSession, addSubmission, getBySession, submitSession, listSessions  };
