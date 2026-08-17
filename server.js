@@ -3,8 +3,7 @@ const { runTests } = require('./runner/execute');
 const express = require('express');
 const app = express();
 
-
-const { createSession, getSession, addSubmission, getBySession } = require('./data/submissions');
+const { createSession, getSession, addSubmission, getBySession, submitSession } = require('./data/submissions');
 
 const session = require('express-session');
 const SqliteStore = require('better-sqlite3-session-store')(session);
@@ -160,4 +159,13 @@ app.get('/api/auth/me', (req, res) => {
   const user = getUserById(req.session.userId);
   if (!user) return res.status(401).json({ error: 'Not authenticated' });
   res.json({ user });
+});
+
+app.post('/api/sessions/:id/submit', requireAuth, (req, res) => {
+  const session = getSession(req.params.id);
+  if (!session) return res.status(404).json({ error: 'Session not found' });
+  if (session.user_id !== req.user.id) return res.status(403).json({ error: 'Not your session' });
+
+  const ok = submitSession(session.id);
+  res.json({ submitted: ok, submittedAt: new Date().toISOString() });
 });

@@ -6,14 +6,15 @@ const db = new Database(path.join(__dirname, 'analyzer.db'));
 db.pragma('journal_mode = WAL');
 
 db.exec(`
-  CREATE TABLE IF NOT EXISTS challenge_sessions (
-  user_id INTEGER,
+ CREATE TABLE IF NOT EXISTS challenge_sessions (
     id TEXT PRIMARY KEY,
+    user_id INTEGER,
     problem_id INTEGER NOT NULL,
     original_code TEXT NOT NULL,
-    created_at TEXT NOT NULL
+    created_at TEXT NOT NULL,
+    submitted_at TEXT
   );
-
+  
   CREATE TABLE IF NOT EXISTS submissions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     session_id TEXT NOT NULL,

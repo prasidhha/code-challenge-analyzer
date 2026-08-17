@@ -1,7 +1,6 @@
 const { getUserById } = require('../data/users');
 
 function attachUser(req, res, next) {
-   console.log('session:', req.session && req.session.userId);
   if (req.session && req.session.userId) {
     req.user = getUserById(req.session.userId) || null;
   } else {

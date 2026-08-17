@@ -31,4 +31,13 @@ function getBySession(sessionId) {
   return selectBySession.all(sessionId);
 }
 
-module.exports = { createSession, getSession, addSubmission, getBySession };
+const markSubmitted = db.prepare(
+  'UPDATE challenge_sessions SET submitted_at = ? WHERE id = ? AND submitted_at IS NULL'
+);
+
+function submitSession(id) {
+  const info = markSubmitted.run(new Date().toISOString(), id);
+  return info.changes > 0;
+}
+
+module.exports = { createSession, getSession, addSubmission, getBySession, submitSession };

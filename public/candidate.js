@@ -100,5 +100,54 @@ function escapeHtml(s) {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+async function submitSolution() {
+  if (!confirm('Submit your final solution? You will not be able to make further changes.')) return;
+
+  const btn = document.getElementById('submit');
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(`/api/sessions/${sessionId}/submit`, { method: 'POST' });
+    const data = await res.json();
+
+    if (!res.ok) {
+      document.getElementById('results').innerHTML = `<p class="error">${data.error}</p>`;
+      btn.disabled = false;
+      return;
+    }
+
+    document.getElementById('run').disabled = true;
+    editor.setOption('readOnly', true);
+    btn.textContent = 'Submitted';
+  } catch {
+    document.getElementById('results').innerHTML = '<p class="error">Cannot reach the server</p>';
+    btn.disabled = false;
+  }
+}
+
+function startTimer(deadlineIso) {
+  const deadline = new Date(deadlineIso).getTime();
+  const el = document.getElementById('timer');
+
+  const tick = () => {
+    const left = deadline - Date.now();
+    if (left <= 0) {
+      el.textContent = '00:00:00 Left';
+      document.getElementById('run').disabled = true;
+      document.getElementById('submit').disabled = true;
+      clearInterval(handle);
+      return;
+    }
+    const h = String(Math.floor(left / 3600000)).padStart(2, '0');
+    const m = String(Math.floor(left / 60000) % 60).padStart(2, '0');
+    const s = String(Math.floor(left / 1000) % 60).padStart(2, '0');
+    el.textContent = `${h}:${m}:${s} Left`;
+  };
+
+  tick();
+  const handle = setInterval(tick, 1000);
+}
+document.getElementById('submit').addEventListener('click', submitSolution);
+
 document.getElementById('run').addEventListener('click', run);
 init();
