@@ -23,3 +23,14 @@ body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background:
 .hidden { display: none; }
 .muted { color: #888; }
 .error { color: #e03131; }
+
+.metric-grid { display: flex; gap: 32px; flex-wrap: wrap; }
+.metric { display: flex; flex-direction: column; }
+.metric-value { font-size: 24px; font-weight: 600; }
+.metric-label { font-size: 12px; color: #888; }
+
+.diff { font-family: ui-monospace, Consolas, monospace; font-size: 13px; border: 1px solid #e5e5e5; border-radius: 6px; overflow: hidden; }
+.diff-line { display: flex; padding: 2px 8px; white-space: pre; }
+.diff-line.added { background: #e6ffed; }
+.diff-line.removed { background: #ffeef0; }
+.diff-sign { width: 16px; color: #888; flex-shrink: 0; }
