@@ -30,3 +30,6 @@ Invoke-RestMethod -Method Post -Uri "$base/api/auth/login" -ContentType "applica
 $h = Invoke-RestMethod -Uri "$base/api/sessions/$($s.sessionId)/history" -WebSession $rsess
 Write-Host "Reviewer sees run count:" $h.runCount "lines changed:" $h.diff.changed
 
+Invoke-RestMethod -Method Post -Uri "$base/api/sessions/$($s.sessionId)/submit" -WebSession $sess | Out-Null
+Write-Host "Session submitted - next run starts fresh"
+

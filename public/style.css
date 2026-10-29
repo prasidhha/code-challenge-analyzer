@@ -34,3 +34,8 @@ body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background:
 .diff-line.added { background: #e6ffed; }
 .diff-line.removed { background: #ffeef0; }
 .diff-sign { width: 16px; color: #888; flex-shrink: 0; }
+
+.test-card { border: 1px solid #e5e5e5; border-radius: 6px; padding: 10px 12px; margin-bottom: 10px; background: #fff; }
+.test-title { font-size: 13px; font-weight: 500; margin-bottom: 6px; }
+.test-body { font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: #444; }
+.test-body .label { color: #888; }

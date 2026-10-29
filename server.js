@@ -3,7 +3,7 @@ const { runTests } = require('./runner/execute');
 const express = require('express');
 const app = express();
 
-const { createSession, getSession, addSubmission, getBySession, submitSession, listSessions } = require('./data/submissions');
+const { createSession, getSession, getOpenSession, addSubmission, getBySession, submitSession, listSessions } = require('./data/submissions');
 
 const session = require('express-session');
 const SqliteStore = require('better-sqlite3-session-store')(session);
@@ -42,7 +42,7 @@ app.get('/api/problems', requireAuth, (req, res) => {
   res.json(list);
 });
 
-app.get('/api/problems/:id',  requireAuth,(req, res) => {
+app.get('/api/problems/:id', requireAuth, (req, res) => {
   const id = Number(req.params.id);
   const problem = problems.find(p => p.id === id);
 
@@ -51,12 +51,14 @@ app.get('/api/problems/:id',  requireAuth,(req, res) => {
   }
 
   const { testCases, ...safe } = problem;
+  safe.sampleCases = testCases
+    .filter(t => t.sample)
+    .map(t => ({ input: t.input, expectedOutput: t.expectedOutput }));
+  safe.totalCases = testCases.length;
   res.json(safe);
 });
 
-app.listen(3000, () => {
-  console.log('Server running on http://localhost:3000');
-});
+
 
 const crypto = require('crypto');
 
@@ -65,9 +67,26 @@ app.post('/api/sessions', requireAuth, (req, res) => {
   const problem = problems.find(p => p.id === problemId);
   if (!problem) return res.status(404).json({ error: 'Problem not found' });
 
- const sessionId = crypto.randomUUID();
-createSession(sessionId, req.user.id, problem.id, problem.starterCode);
-res.status(201).json({ sessionId, problemId: problem.id });
+  const existing = getOpenSession(req.user.id, problem.id);
+  if (existing) {
+    const subs = getBySession(existing.id);
+    const latest = subs[subs.length - 1];
+    return res.json({
+      sessionId: existing.id,
+      problemId: problem.id,
+      resumed: true,
+      code: latest ? latest.code : existing.original_code
+    });
+  }
+
+  const sessionId = crypto.randomUUID();
+  createSession(sessionId, req.user.id, problem.id, problem.starterCode);
+  res.status(201).json({
+    sessionId,
+    problemId: problem.id,
+    resumed: false,
+    code: problem.starterCode
+  });
 });
 
 app.post('/api/submissions',  requireAuth,async (req, res) => {
@@ -102,13 +121,6 @@ const testRun = await runTests(code, problem.testCases, problem.language);
   });
 });
 
-app.use((err, req, res, next) => {
-  if (err instanceof SyntaxError && 'body' in err) {
-    return res.status(400).json({ error: 'Invalid JSON in request body' });
-  }
-  console.error(err);
-  res.status(500).json({ error: 'Internal server error' });
-});
 
 const { computeDiff } = require('./analysis/diff');
 
@@ -173,4 +185,16 @@ app.post('/api/sessions/:id/submit', requireAuth, (req, res) => {
 
 app.get('/api/sessions', requireAuth, requireRole('reviewer'), (req, res) => {
   res.json(listSessions());
+});
+
+app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && 'body' in err) {
+    return res.status(400).json({ error: 'Invalid JSON in request body' });
+  }
+  console.error(err);
+  res.status(500).json({ error: 'Internal server error' });
+});
+
+app.listen(3000, () => {
+  console.log('Server running on http://localhost:3000');
 });

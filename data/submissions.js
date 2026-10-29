@@ -56,5 +56,11 @@ function submitSession(id) {
   const info = markSubmitted.run(new Date().toISOString(), id);
   return info.changes > 0;
 }
+const findOpenSession = db.prepare(
+  'SELECT * FROM challenge_sessions WHERE user_id = ? AND problem_id = ? AND submitted_at IS NULL ORDER BY created_at DESC LIMIT 1'
+);
 
-module.exports = { createSession, getSession, addSubmission, getBySession, submitSession, listSessions  };
+function getOpenSession(userId, problemId) {
+  return findOpenSession.get(userId, problemId);
+}
+module.exports = { createSession, getSession, getOpenSession, addSubmission, getBySession, submitSession, listSessions };

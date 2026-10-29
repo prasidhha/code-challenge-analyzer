@@ -19,10 +19,47 @@ def is_palindrome(s):
 
 main_word = input().strip()
 is_palindrome(main_word)`,
-    testCases: [
-      { input: 'madam\n', expectedOutput: 'palindrome\n' },
-      { input: 'hello\n', expectedOutput: 'not palindrome\n' },
-      { input: 'amma\n', expectedOutput: 'palindrome\n' }
+     testCases: [
+      { input: 'madam\n', expectedOutput: 'palindrome\n', sample: true },
+      { input: 'hello\n', expectedOutput: 'not palindrome\n', sample: true },
+      { input: 'amma\n', expectedOutput: 'palindrome\n', sample: true },
+      { input: 'a\n', expectedOutput: 'palindrome\n' },
+      { input: 'abca\n', expectedOutput: 'not palindrome\n' }
+    ]
+  },
+    {
+    id: 2,
+    title: 'Palindrome check (Java)',
+    statement: "Read a word from standard input. Print 'palindrome' if it reads the same backward as forward, otherwise print 'not palindrome'.",
+    language: 'java',
+    starterCode: `import java.util.Scanner;
+
+public class Solution {
+
+    static String reverse(String s) {
+        String rev = "";
+        for (int i = 0; i < s.length(); i++) {
+            rev = rev + s.charAt(s.length() - i - 1);
+        }
+        return rev;
+    }
+
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        String word = sc.next().trim();
+        if (word.equals(reverse(word))) {
+            System.out.println("palindrome");
+        } else {
+            System.out.println("not palindrome");
+        }
+    }
+}`,
+       testCases: [
+      { input: 'madam\n', expectedOutput: 'palindrome\n', sample: true },
+      { input: 'hello\n', expectedOutput: 'not palindrome\n', sample: true },
+      { input: 'amma\n', expectedOutput: 'palindrome\n', sample: true },
+      { input: 'a\n', expectedOutput: 'palindrome\n' },
+      { input: 'abca\n', expectedOutput: 'not palindrome\n' }
     ]
   }
 ];
