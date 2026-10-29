@@ -87,17 +87,18 @@ app.post('/api/submissions',  requireAuth,async (req, res) => {
 if (session.user_id !== req.user.id) {
     return res.status(403).json({ error: 'Not your session' });
   }
-  const testRun = await runTests(code, problem.testCases);
+const testRun = await runTests(code, problem.testCases, problem.language);
   const saved = addSubmission({
     sessionId, problemId: problem.id, code,
     passed: testRun.passed, total: testRun.total
   });
   const runCount = getBySession(sessionId).length;
-
   res.status(201).json({
     submissionId: saved.id, runCount,
     passed: testRun.passed, total: testRun.total,
-    results: testRun.results
+    results: testRun.results,
+    compileError: testRun.compileError,
+    compileOutput: testRun.compileOutput
   });
 });
 
